@@ -30,6 +30,9 @@ import { registerSlashCommand } from "./slash-commands.js";
 
 import { delay, debounce } from "./utils.js";
 
+import { getStats, charStats } from './stats.js';
+
+
 export {
     loadPowerUserSettings,
     loadMovingUIState,
@@ -935,21 +938,33 @@ export function formatInstructModePrompt(name, isImpersonate, promptBias, name1,
 }
 
 const sortFunc = (a, b) => power_user.sort_order == 'asc' ? compareFunc(a, b) : compareFunc(b, a);
-const compareFunc = (first, second) => {
+const compareFunc = async (first, second) => {
     if (power_user.sort_order == 'random') {
         return Math.random() > 0.5 ? 1 : -1;
     }
-
     switch (power_user.sort_rule) {
         case 'boolean':
             const a = first[power_user.sort_field];
             const b = second[power_user.sort_field];
+            console.log(a,b);
             if (a === true || a === 'true') return 1;  // Prioritize 'true' or true
             if (b === true || b === 'true') return -1; // Prioritize 'true' or true
             if (a && !b) return -1;        // Move truthy values to the end
             if (!a && b) return 1;         // Move falsy values to the beginning
             if (a === b) return 0;         // Sort equal values normally
             return a < b ? -1 : 1;         // Sort non-boolean values normally
+        case 'stat':
+            await getStats()
+            console.log(charStats);
+            try{
+                return typeof first[power_user.sort_field] == "string"
+                    ? charStats[first.avatar][power_user.sort_field].localeCompare(charStats[second.avatar][power_user.sort_field])
+                    : charStats[first.avatar][power_user.sort_field] - charStats[second.avatar][power_user.sort_field];
+            } catch (err) {
+                console.log(err);
+                console.log(first, second);
+                console.log(charStats[first.avatar], charStats[second.avatar]);
+            }
         default:
             return typeof first[power_user.sort_field] == "string"
                 ? first[power_user.sort_field].localeCompare(second[power_user.sort_field])
